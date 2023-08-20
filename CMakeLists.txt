@@ -10,9 +10,9 @@ if (POLICY CMP0141)
 endif()
 
 project ("OpenGLProject")
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 add_executable("OpenGlProject" "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
 add_subdirectory(glad/)
 target_link_libraries("OpenGlProject" PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/lib/glfw3.lib"  glad)
-target_include_directories("OpenGlProject" PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/")
+target_include_directories("OpenGlProject" PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/" "C:/Program Files (x86)/Windows Kits/10/Include/10.0.22000.0/ucrt")
 
