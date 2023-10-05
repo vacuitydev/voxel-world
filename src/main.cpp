@@ -2,8 +2,15 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <tuple>
+#include <glm/vec3.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <vector>
 #include "graphics/shader.h"
+#include "graphics/model.h"
+#include "graphics/geometry.h"
+#include "utils/generators.h"
+#include "utils/read_image.h"
 using namespace std;
 void processInput(GLFWwindow *window)
 {
@@ -14,107 +21,7 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height)
 {
 	glViewport(0, 0, width, height);
 }
-struct Coordinate
-{
-	float x;
-	float y;
-	Coordinate(float x, float y)
-	{
-		this->x = x;
-		this->y = y;
-	};
-};
-vector<float> get_triangle_vertices(float scale = 1.0f, Coordinate offset = {0.0f, 0.0f})
-{
-	vector<float> vertices = {
-		-0.5f + offset.x,
-		-0.5f + offset.y,
-		0.0f,
-		0.5f + offset.x,
-		-0.5f + offset.y,
-		0.0f,
-		0.0f + offset.x,
-		0.5f + offset.y,
-		0.0f,
 
-	};
-	return vertices;
-};
-vector<int> get_triangle_indices(){
-	return {
-		0,1,2
-	};
-}
-vector<float> get_square_vertices(){
-	return {
-		-.5f,-.9f,.0f,
-		+.5f,-.9f,.0f,
-		+.5f,+.9f,.0f,
-		-.5f,+.9f,.0f,
-	};
-}
-vector<int> get_square_indices(){
-	return {
-		0,1,2,
-		2,3,0
-	};
-};
-unsigned int create_shader_program()
-{
-	const char *vertexShaderSource = "#version 330 core\n"
-									 "layout (location = 0) in vec3 aPos;\n"
-									 "void main()\n"
-									 "{\n"
-									 "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-									 "}\0";
-	unsigned int vertexShader;
-	vertexShader = glCreateShader(GL_VERTEX_SHADER);
-
-	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-	glCompileShader(vertexShader);
-
-	int success;
-	char infoLog[512];
-	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-	if (!success)
-	{
-		glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-		std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n"
-				  << infoLog << std::endl;
-	}
-	const char *fragment_shader_source = R"(
-	#version 330 core
-	out vec4 FragColor;
-	void main(){
-		FragColor = vec4(1.0f,0.5f,0.4f,1.0f);
-	}
-)";
-	unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(fragmentShader, 1, &fragment_shader_source, NULL);
-	glCompileShader(fragmentShader);
-	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-	if (!success)
-	{
-		glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-		std::cout << "ERROR::SHADER::Fragment::COMPILATION_FAILED\n"
-				  << infoLog << std::endl;
-	}
-	unsigned int shaderProgram;
-	shaderProgram = glCreateProgram();
-	glAttachShader(shaderProgram, vertexShader);
-	glAttachShader(shaderProgram, fragmentShader);
-	glLinkProgram(shaderProgram);
-	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-	if (!success)
-	{
-		glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-		std::cout << "ERROR::SHADER::Program::COMPILATION_FAILED\n"
-				  << infoLog << std::endl;
-	}
-	glDeleteShader(vertexShader);
-	glDeleteShader(fragmentShader);
-	return shaderProgram;
-}
 int main()
 {
 	glfwInit();
@@ -137,44 +44,65 @@ int main()
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-	auto vertices = 	get_square_vertices();
-	auto indices = 		get_square_indices();
-	size_t vertices_size = vertices.size() * sizeof(float);
+	std::tuple<vector<VertexData>, vector<int>> quad = get_quad_vertices_indices(glm::vec3{0, +0.2, 0}, glm::normalize(glm::vec3{0, -0.5, -1}), 0.5f, 0);
+	auto vertices = std::get<0>(quad);
+	auto indices = std::get<1>(quad);
 
+	Model square_model = Model(vertices, indices);
+	quad = get_quad_vertices_indices(glm::vec3{-0.5f, -0.5f, 0}, glm::normalize(glm::vec3{0, 0, 1}), 0.5f, 0);
+	Model model2 = Model(std::get<0>(quad), std::get<1>(quad));
+	quad = get_quad_vertices_indices(glm::vec3{0}, glm::vec3{.0f,.0f,1.f}, 0.5f, 0);
+	Model model3 = Model(std::get<0>(quad), std::get<1>(quad));
+	Shader shader = Shader::shaderFromFiles("shaders/default.vert", "./shaders/default.frag");
+	Geometry g1= Geometry(&square_model,&shader);
+	Geometry g2= Geometry(&model2, 		&shader);
+	Geometry g3= Geometry(&model3, 		&shader);
 
-	unsigned int VAO;
-	glGenVertexArrays(1, &VAO);
-	glBindVertexArray(VAO);
-
-	unsigned int VBO;
-	glGenBuffers(1, &VBO);
-	
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	std::cout << "Size " << vertices_size << endl;
-	glBufferData(GL_ARRAY_BUFFER, vertices_size, vertices.data(), GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
-	glEnableVertexAttribArray(0);
-
-	
-	unsigned int EBO;
-	glGenBuffers(1, &EBO);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size()*sizeof(float), indices.data(), GL_STATIC_DRAW);
-
-	unsigned int shaderProgram = create_shader_program();
 	glFrontFace(GL_CCW);
+
+	unsigned int texture;
+	glGenTextures(1, &texture);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	// set the texture wrapping/filtering options (on the currently bound texture object)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	// load and generate the texture
+	ImageData imageData = read_image_from_file("/images/popcat.jpg");
+	if (imageData.data)
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, imageData.width, imageData.height, 0, GL_RGB, GL_UNSIGNED_BYTE, imageData.data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+	else
+	{
+		std::cout << "Failed to load texture" << std::endl;
+	}
+	glm::mat4 trans = glm::mat4(1.0f);
+	trans = glm::rotate(trans, glm::radians(90.0f), glm::vec3(0.0, 0.0, 1.0));
+	trans = glm::scale(trans, glm::vec3(0.5, 0.5, 0.5));
+
+	unsigned int transformLoc = glGetUniformLocation(shader.Id, "transform");
+	// std::cout<<"Transforming "<<trans<<std::endl;
 	while (!glfwWindowShouldClose(window))
 	{
 		processInput(window);
 		glfwPollEvents();
 		glClear(GL_COLOR_BUFFER_BIT);
-		glUseProgram(shaderProgram);
-		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+		
+		glBindTexture(GL_TEXTURE_2D, texture);
+		g1.Draw();
+		g2.Draw();
+		g3.Draw();
+		GLenum error;
+		while ((error = glGetError()) != GL_NO_ERROR)
+		{
+			std::cerr << "OpenGL Error: " << error << std::endl;
+		}
 		glfwSwapBuffers(window);
 	}
 
-	
 	glfwTerminate();
 
 	return 0;

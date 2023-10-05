@@ -1,0 +1,10 @@
+^D:\INEFF\PROJECTS\2023\08\OPENGL\WITH CMAKE\GLAD\CMAKELISTS.TXT
+setlocal
+"E:\Program Files\CMake\bin\cmake.exe" "-SD:/Ineff/Projects/2023/08/OpenGL/with cmake" "-BD:/Ineff/Projects/2023/08/OpenGL/with cmake" --check-stamp-file "D:/Ineff/Projects/2023/08/OpenGL/with cmake/glad/CMakeFiles/generate.stamp"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

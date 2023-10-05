@@ -4,7 +4,8 @@
 #include <fstream>
 #include "../utils/exception.h"
 #include <sstream>
-#include <format>
+#define FMT_HEADER_ONLY
+#include <fmt/format.h>
 using namespace std;
 std::variant<Exception,std::string> read_string_from_file(const char* path){
     string output;
@@ -17,7 +18,9 @@ std::variant<Exception,std::string> read_string_from_file(const char* path){
         file_stream.close();
         output =input_stream.str();
     }catch(ifstream::failure e){
-        return Exception(std::format("File {0} could not be read", path));
+        return Exception(fmt::format("File {0} could not be read", path));
+        // return Exception("File could not be read");
+
     }
     return output;
 }
